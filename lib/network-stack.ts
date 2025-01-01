@@ -3,6 +3,16 @@ import { Construct } from "constructs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 export class NetworkStack extends cdk.Stack {
+    public readonly vpc: ec2.Vpc;
+
+    public readonly albSecurityGroup: ec2.SecurityGroup;
+
+    public readonly ecsServiceSecurityGroup: ec2.SecurityGroup;
+
+    public readonly redisSecurityGroup: ec2.SecurityGroup;
+
+    public readonly dbSecurityGroup: ec2.SecurityGroup;
+
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
@@ -43,14 +53,14 @@ export class NetworkStack extends cdk.Stack {
         cdk.Tags.of(albSg).add("Name", "alb-sg");
 
         // service-sg
-        const ecsServices = new ec2.SecurityGroup(this, "ecs-services-sg", {
+        const ecsServicesSg = new ec2.SecurityGroup(this, "ecs-services-sg", {
             vpc,
             securityGroupName: "ecs-services-sg",
             description: "ecs services",
         });
-        ecsServices.addIngressRule(albSg, ec2.Port.tcp(8080), "ecs services");
+        ecsServicesSg.addIngressRule(albSg, ec2.Port.tcp(8080), "ecs services");
 
-        cdk.Tags.of(ecsServices).add("Name", "ecs-services-sg");
+        cdk.Tags.of(ecsServicesSg).add("Name", "ecs-services-sg");
 
         // redis-sg
         const redisSg = new ec2.SecurityGroup(this, "redis-sg", {
@@ -58,7 +68,7 @@ export class NetworkStack extends cdk.Stack {
             securityGroupName: "redis-sg",
             description: "redis",
         });
-        redisSg.addIngressRule(ecsServices, ec2.Port.tcp(6379), "redis");
+        redisSg.addIngressRule(ecsServicesSg, ec2.Port.tcp(6379), "redis");
 
         cdk.Tags.of(redisSg).add("Name", "redis-sg");
 
@@ -68,8 +78,14 @@ export class NetworkStack extends cdk.Stack {
             securityGroupName: "db-sg",
             description: "database",
         });
-        dbSg.addIngressRule(ecsServices, ec2.Port.tcp(27017), "database");
+        dbSg.addIngressRule(ecsServicesSg, ec2.Port.tcp(27017), "database");
 
         cdk.Tags.of(dbSg).add("Name", "db-sg");
+
+        this.vpc = vpc;
+        this.albSecurityGroup = albSg;
+        this.ecsServiceSecurityGroup = ecsServicesSg;
+        this.redisSecurityGroup = redisSg;
+        this.dbSecurityGroup = dbSg;
     }
 }

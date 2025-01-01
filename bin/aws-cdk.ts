@@ -2,6 +2,7 @@
 import * as cdk from "aws-cdk-lib";
 import { NetworkStack } from "../lib/network-stack";
 import { EcrStack } from "../lib/ecr-stack";
+import { AlbStack } from "../lib/alb-stack";
 
 const bootstrap = () => {
     const app = new cdk.App();
@@ -13,8 +14,15 @@ const bootstrap = () => {
         },
     };
 
-    new NetworkStack(app, "NetworkStack", props);
+    const network = new NetworkStack(app, "NetworkStack", props);
+
     new EcrStack(app, "EcrStack", props);
+
+    new AlbStack(app, "AlbStack", {
+        ...props,
+        vpc: network.vpc,
+        albSecurityGroup: network.albSecurityGroup,
+    });
 };
 
 bootstrap();
