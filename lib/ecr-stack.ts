@@ -7,7 +7,7 @@ export class EcrStack extends cdk.Stack {
         super(scope, id, props);
 
         new ecr.Repository(this, "ecr", {
-            repositoryName: "prod/superman",
+            repositoryName: "superman",
             removalPolicy: cdk.RemovalPolicy.RETAIN,
             lifecycleRules: [
                 {
