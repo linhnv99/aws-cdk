@@ -5,6 +5,7 @@ import { EcrStack } from "../lib/ecr-stack";
 import { AlbStack } from "../lib/alb-stack";
 import { S3Stack } from "../lib/s3-stack";
 import { CodebuildStack } from "../lib/codebuild-stack";
+import { EcsStack } from "../lib/ecs-stack";
 
 const bootstrap = () => {
     const app = new cdk.App();
@@ -20,9 +21,9 @@ const bootstrap = () => {
 
     const s3 = new S3Stack(app, "S3Stack", props);
 
-    new EcrStack(app, "EcrStack", props);
+    const ecr = new EcrStack(app, "EcrStack", props);
 
-    new AlbStack(app, "AlbStack", {
+    const alb = new AlbStack(app, "AlbStack", {
         ...props,
         vpc: network.vpc,
         albSecurityGroup: network.albSecurityGroup,
@@ -32,6 +33,16 @@ const bootstrap = () => {
         ...props,
         cicdBucket: s3.cicdBucket,
     });
+
+    new EcsStack(app, "EcsStack", {
+        ...props,
+        ecrRepository: ecr.ecrRepository,
+        vpc: network.vpc,
+        ecsServiceSecurityGroup: network.ecsServiceSecurityGroup,
+        blueTargetGroup: alb.blueTargetGroup,
+        greenTargetGroup: alb.greenTargetGroup,
+        albListener: alb.albListener
+    })
 };
 
 bootstrap();

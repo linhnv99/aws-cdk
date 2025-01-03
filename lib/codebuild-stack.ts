@@ -17,10 +17,7 @@ export class CodebuildStack extends cdk.Stack {
         const { cicdBucket, env: { account = "", region = "" } = {} } = props;
 
         // create role for codebuild
-        const codebuildRole = new iam.Role(this, "CodebuildRole", {
-            assumedBy: new iam.ServicePrincipal("codebuild.amazonaws.com"),
-        });
-        this.attachCodeBuildPolicies(codebuildRole);
+        const codebuildRole = this.createCodebuildRole()
 
         // create codebuild
         const codebuildProject = new codebuild.Project(
@@ -57,6 +54,14 @@ export class CodebuildStack extends cdk.Stack {
             }
         );
         this.codebuild = codebuildProject;
+    }
+
+    private createCodebuildRole(): iam.Role {
+        const role = new iam.Role(this, "CodebuildRole", {
+            assumedBy: new iam.ServicePrincipal("codebuild.amazonaws.com"),
+        });
+        this.attachCodeBuildPolicies(role);
+        return role;
     }
 
     private attachCodeBuildPolicies(codebuildRole: iam.Role): void {
