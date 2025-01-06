@@ -24,6 +24,9 @@ export class AlbStack extends cdk.Stack {
             internetFacing: true,
             securityGroup: albSecurityGroup,
             loadBalancerName: "NF-ALB",
+            vpcSubnets: {
+                subnetType: ec2.SubnetType.PUBLIC
+            }
         });
 
         // target group
@@ -34,7 +37,7 @@ export class AlbStack extends cdk.Stack {
                 vpc,
                 port: 80,
                 protocol: elbv2.ApplicationProtocol.HTTP,
-                targetType: elbv2.TargetType.INSTANCE,
+                targetType: elbv2.TargetType.IP,
                 healthCheck: {
                     path: "/api/v1/health-check",
                 },
@@ -49,7 +52,7 @@ export class AlbStack extends cdk.Stack {
                 vpc,
                 port: 80,
                 protocol: elbv2.ApplicationProtocol.HTTP,
-                targetType: elbv2.TargetType.INSTANCE,
+                targetType: elbv2.TargetType.IP,
                 healthCheck: {
                     path: "/api/v1/health-check",
                 },

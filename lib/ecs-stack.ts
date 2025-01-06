@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import { Construct } from "constructs";
+import { Construct, IConstruct } from "constructs";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -35,6 +35,7 @@ export class EcsStack extends cdk.Stack {
             clusterName: "nf-cluster"
         });
 
+        // services
         const service = new ecs.FargateService(this, 'Service', {
             serviceName: "superman-service",
             cluster,
@@ -49,8 +50,10 @@ export class EcsStack extends cdk.Stack {
                 type: ecs.DeploymentControllerType.CODE_DEPLOY
             },
         });
+        service.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY)
+        service.attachToApplicationTargetGroup(blueTargetGroup)
 
-
+        // codedeploy 
         const codedeployApp = new codedeploy.EcsApplication(this, 'EcsCodeDeployApp', {
             applicationName: "superman"
         });
