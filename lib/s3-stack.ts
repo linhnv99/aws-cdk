@@ -12,7 +12,8 @@ export class S3Stack extends cdk.Stack {
 
         const cicdBucket = new s3.Bucket(this, "CicdBucket", {
             bucketName: "nf-cicd",
-            removalPolicy: cdk.RemovalPolicy.RETAIN,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            autoDeleteObjects: true
         });
 
         new s3deploy.BucketDeployment(this, "CicdDeployment", {

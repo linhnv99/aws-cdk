@@ -47,7 +47,7 @@ export class EcsStack extends cdk.Stack {
             securityGroups: [ecsServiceSecurityGroup],
             deploymentController: {
                 type: ecs.DeploymentControllerType.CODE_DEPLOY
-            }
+            },
         });
 
 
@@ -99,7 +99,8 @@ export class EcsStack extends cdk.Stack {
                 maxBufferSize: Size.mebibytes(50),
                 logGroup: new logs.LogGroup(this, 'SupermanLogGroup', {
                     retention: logs.RetentionDays.ONE_WEEK,
-                    logGroupName: "/ecs/superman-td"
+                    logGroupName: "/ecs/superman-td",
+                    removalPolicy: cdk.RemovalPolicy.DESTROY
                 }),
 
             })
