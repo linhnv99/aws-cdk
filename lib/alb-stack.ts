@@ -9,7 +9,6 @@ interface AlbStackProps extends cdk.StackProps {
 }
 
 export class AlbStack extends cdk.Stack {
-
     public readonly blueTargetGroup: elbv2.ApplicationTargetGroup;
     public readonly greenTargetGroup: elbv2.ApplicationTargetGroup;
     public readonly albListener: elbv2.ApplicationListener;

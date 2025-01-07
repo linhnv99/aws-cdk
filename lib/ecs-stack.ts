@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import { Construct, IConstruct } from "constructs";
+import { Construct } from "constructs";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -19,6 +19,8 @@ interface EcsStackProps extends cdk.StackProps {
 }
 
 export class EcsStack extends cdk.Stack {
+    public readonly ecsDeploymentGroup: codedeploy.EcsDeploymentGroup;
+
     constructor(scope: Construct, id: string, props: EcsStackProps) {
         super(scope, id, props);
         const { ecrRepository, vpc, ecsServiceSecurityGroup, blueTargetGroup, greenTargetGroup, albListener } = props;
@@ -60,7 +62,7 @@ export class EcsStack extends cdk.Stack {
 
         const codeDeployRole = this.createCodeDeployRole()
 
-        new codedeploy.EcsDeploymentGroup(this, 'EcsDeploymentGroup', {
+        this.ecsDeploymentGroup = new codedeploy.EcsDeploymentGroup(this, 'EcsDeploymentGroup', {
             application: codedeployApp,
             deploymentGroupName: "superman-group",
             service: service,
