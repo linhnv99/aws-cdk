@@ -1,101 +1,58 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
-import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
-import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
-import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as codedeploy from "aws-cdk-lib/aws-codedeploy";
+import * as codebuild from "aws-cdk-lib/aws-codebuild";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as iam from "aws-cdk-lib/aws-iam";
 
-interface CicdStackProps extends cdk.StackProps {
-    cicdBucket: s3.Bucket;
-    ecsDeploymentGroup: codedeploy.EcsDeploymentGroup;
-}
+export class CodeBuildStack extends cdk.Stack {
+    public readonly supermanCodeBuild: codebuild.Project;
 
-export class CicdStack extends cdk.Stack {
-
-    constructor(scope: Construct, id: string, props: CicdStackProps) {
+    constructor(scope: Construct, id: string, props: cdk.StackProps) {
         super(scope, id, props);
-        const { cicdBucket, ecsDeploymentGroup } = props;
 
-        // codebuild 
-        const supermanCodebuild = this.createCodeBuild("superman-build", props);
+        const { env: { account = "", region = "" } = {} } = props;
 
+        const cicdBucket = s3.Bucket.fromBucketName(
+            this,
+            "ImportedCicdBucket",
+            cdk.Fn.importValue("CicdBucketName")
+        );
+        // codebuild
+        const supermanCodeBuild = this.createCodeBuild(
+            "superman-build",
+            cicdBucket,
+            account,
+            region
+        );
 
-        // codedeploy
-        // codepipeline
-
-
-        const artifactBucket = new s3.Bucket(this, 'ArtifactBucket', {
-            versioned: true,
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-            autoDeleteObjects: true,
-        });
-
-        const sourceOutput = new codepipeline.Artifact();
-
-        const buildOutput = new codepipeline.Artifact();
-
-        // codepipeline role
-        const pipeline = new codepipeline.Pipeline(this, 'Pipeline', {
-            pipelineName: 'superman-pipeline',
-            artifactBucket: artifactBucket,
-        });
-
-        pipeline.addStage({
-            stageName: 'Source',
-            actions: [
-                new codepipelineActions.S3SourceAction({
-                    actionName: 'S3Source',
-                    bucket: cicdBucket,
-                    bucketKey: 'cicd.zip',
-                    output: sourceOutput,
-                }),
-            ],
-        })
-
-        pipeline.addStage({
-            stageName: 'Build',
-            actions: [
-                new codepipelineActions.CodeBuildAction({
-                    actionName: 'CodeBuild',
-                    project: supermanCodebuild,
-                    input: sourceOutput,
-                    outputs: [buildOutput],
-                }),
-            ],
-        });
-
-        pipeline.addStage({
-            stageName: 'Deploy',
-            actions: [
-                new codepipelineActions.CodeDeployEcsDeployAction({
-                    actionName: 'Deploy',
-                    deploymentGroup: ecsDeploymentGroup,
-                    appSpecTemplateInput: buildOutput,
-                    taskDefinitionTemplateInput: buildOutput,
-                }),
-            ],
-        });
+        this.supermanCodeBuild = supermanCodeBuild;
     }
 
-    private createCodeBuild(service: string, props: CicdStackProps): codebuild.Project {
-        const { cicdBucket, env: { account = "", region = "" } = {} } = props;
-
-        // create role for codebuild
-        const codebuildRole = this.createCodebuildRole()
-
-        // create codebuild
+    private createCodeBuild(
+        service: string,
+        cicdBucket: s3.IBucket,
+        account: string,
+        region: string
+    ): codebuild.Project {
+        const artifactBucket = s3.Bucket.fromBucketName(
+            this,
+            "ImportedArtifactBucket",
+            cdk.Fn.importValue("ArtifactBucketName")
+        );
         return new codebuild.Project(this, service, {
             source: codebuild.Source.s3({
                 bucket: cicdBucket,
                 path: "cicd.zip",
             }),
-            role: codebuildRole,
+            role: this.createCodebuildRole(),
             environment: {
                 buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_5,
                 computeType: codebuild.ComputeType.SMALL,
             },
+            artifacts: codebuild.Artifacts.s3({
+                bucket: artifactBucket,
+                includeBuildId: true,
+            }),
             environmentVariables: {
                 SERVICE_NAME: {
                     type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
@@ -110,14 +67,11 @@ export class CicdStack extends cdk.Stack {
                     value: region,
                 },
             },
-            buildSpec: codebuild.BuildSpec.fromSourceFilename(
-                "cicd/buildspec.yml"
-            ),
+            buildSpec:
+                codebuild.BuildSpec.fromSourceFilename("cicd/buildspec.yml"),
             projectName: service,
-        }
-        );
+        });
     }
-
 
     private createCodebuildRole(): iam.Role {
         const role = new iam.Role(this, "CodebuildRole", {
@@ -182,20 +136,16 @@ export class CicdStack extends cdk.Stack {
             }
         );
 
-        const s3Policy = new iam.Policy(
-            this,
-            "s3Policy",
-            {
-                policyName: "s3Policy",
-                statements: [
-                    new iam.PolicyStatement({
-                        effect: iam.Effect.ALLOW,
-                        actions: ["s3:*"],
-                        resources: ["*"],
-                    }),
-                ],
-            }
-        );
+        const s3Policy = new iam.Policy(this, "s3Policy", {
+            policyName: "s3Policy",
+            statements: [
+                new iam.PolicyStatement({
+                    effect: iam.Effect.ALLOW,
+                    actions: ["s3:*"],
+                    resources: ["*"],
+                }),
+            ],
+        });
 
         codebuildRole.attachInlinePolicy(ecrPolicy);
         codebuildRole.attachInlinePolicy(secretManagerPolicy);

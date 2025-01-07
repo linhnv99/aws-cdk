@@ -5,7 +5,9 @@ import { EcrStack } from "../lib/ecr-stack";
 import { AlbStack } from "../lib/alb-stack";
 import { S3Stack } from "../lib/s3-stack";
 import { EcsStack } from "../lib/ecs-stack";
-import { CicdStack } from "../lib/cicd-stack";
+import { CodeDeployStack } from "../lib/codedeploy-stack";
+import { CodeBuildStack } from "../lib/codebuild-stack";
+import { CodePipelineStack } from "../lib/codepipeline-stack";
 
 const bootstrap = () => {
     const app = new cdk.App();
@@ -29,21 +31,31 @@ const bootstrap = () => {
         albSecurityGroup: network.albSecurityGroup,
     });
 
+    const codebuild = new CodeBuildStack(app, "CodeBuildStack", props);
+
+    // ecs blue/green deployment
     const ecs = new EcsStack(app, "EcsStack", {
         ...props,
         ecrRepository: ecr.ecrRepository,
         vpc: network.vpc,
         ecsServiceSecurityGroup: network.ecsServiceSecurityGroup,
         blueTargetGroup: alb.blueTargetGroup,
-        greenTargetGroup: alb.greenTargetGroup,
-        albListener: alb.albListener
-    })
-    
-    new CicdStack(app, "CicdStack", {
+    });
+
+    const codedeploy = new CodeDeployStack(app, "CodeDeployStack", {
         ...props,
-        cicdBucket: s3.cicdBucket,
-        ecsDeploymentGroup: ecs.ecsDeploymentGroup,
-    })
+        ecsServiceSecurityGroup: network.ecsServiceSecurityGroup,
+        blueTargetGroup: alb.blueTargetGroup,
+        greenTargetGroup: alb.greenTargetGroup,
+        albListener: alb.albListener,
+        service: ecs.ecsService,
+    });
+
+    new CodePipelineStack(app, "CodePipelineStack", {
+        ...props,
+        supermanDeploymentGroup: codedeploy.ecsDeploymentGroup,
+        supermanCodeBuild: codebuild.supermanCodeBuild,
+    });
 };
 
 bootstrap();

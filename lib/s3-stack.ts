@@ -14,7 +14,7 @@ export class S3Stack extends cdk.Stack {
             versioned: true,
             bucketName: "nf-cicd",
             removalPolicy: cdk.RemovalPolicy.DESTROY,
-            autoDeleteObjects: true
+            autoDeleteObjects: true,
         });
 
         new s3deploy.BucketDeployment(this, "CicdDeployment", {
@@ -24,5 +24,21 @@ export class S3Stack extends cdk.Stack {
         });
 
         this.cicdBucket = cicdBucket;
+
+        const artifactBucket = new s3.Bucket(this, "ArtifactBucket", {
+            versioned: true,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            autoDeleteObjects: true,
+        });
+
+        new cdk.CfnOutput(this, "CicdBucketName", {
+            value: cicdBucket.bucketName,
+            exportName: "CicdBucketName",
+        });
+
+        new cdk.CfnOutput(this, "ArtifactBucketName", {
+            value: artifactBucket.bucketName,
+            exportName: "ArtifactBucketName",
+        });
     }
 }
